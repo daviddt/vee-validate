@@ -320,7 +320,13 @@ export default class Validator
             } else {
                 params = [rules[rule]];
             }
-            validations[rule] = params;
+
+            if (rules[rule] === false) {
+                delete validations[rule];
+            } else {
+                validations[rule] = params;
+            }
+
             if (date.installed && this._isADateRule(rule)) {
                 validations[rule].push(this._getDateFormat(validations));
             }
@@ -560,8 +566,17 @@ export default class Validator
      * Updates the field rules with new ones.
      */
     updateField(name, checks, options = {}) {
-        this.errorBag.remove(name, options.scope);
+        let field = (this.$scopes[options.scope] && this.$scopes[options.scope][name]) || null;
+        const oldChecks = field ? JSON.stringify(field.validations) : '';
         this._createField(name, checks, options.scope);
+        field = (this.$scopes[options.scope] && this.$scopes[options.scope][name]) || null;
+        const newChecks = field ? JSON.stringify(field.validations) : '';
+
+        // compare both newChecks and oldChecks to make sure we don't trigger uneccessary directive
+        // update by changing the errorBag (prevents infinite loops).
+        if (newChecks !== oldChecks) {
+            this.errorBag.remove(name, options.scope);
+        }
     }
 
     /**
